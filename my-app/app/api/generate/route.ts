@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       .upload(filePath, file);
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return NextResponse.json({ step: "storage upload", error: uploadError.message }, { status: 500 });
     }
 
     const { data: publicUrlData } = supabase.storage.from("images").getPublicUrl(filePath);
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     .single();
 
   if (imageInsertError) {
-    return NextResponse.json({ error: imageInsertError.message }, { status: 500 });
+    return NextResponse.json({ step: "images insert", error: imageInsertError.message }, { status: 500 });
   }
 
   // 5. Insert the caption row
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     .single();
 
   if (captionInsertError) {
-    return NextResponse.json({ error: captionInsertError.message }, { status: 500 });
+    return NextResponse.json({ step: "captions insert", error: captionInsertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ image: imageRow, caption: captionRow });
