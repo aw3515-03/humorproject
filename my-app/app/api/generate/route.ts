@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
+  console.log("SUPABASE CLIENT CREATED");
+
 
   const {
     data: { user },
@@ -24,7 +26,6 @@ export async function POST(request: Request) {
     const { error: uploadError } = await supabase.storage
       .from("images")
       .upload(filePath, file);
-
     if (uploadError) {
       return NextResponse.json({ step: "storage upload", error: uploadError.message }, { status: 500 });
     }
@@ -40,11 +41,9 @@ export async function POST(request: Request) {
   // 2. Ask the LLM to describe the image
   const describePrompt = "Describe this image in a few sentences.";
   const description = await callGemini(describePrompt, imageUrl);
-
   // 3. Ask the LLM to make a funny remark based on that description
   const funnyPrompt = `Here is a description of an image: "${description}". Write one short, funny caption based on this description.`;
   const funnyCaption = await callGemini(funnyPrompt);
-
   // 4. Insert the image row
   const { data: imageRow, error: imageInsertError } = await supabase
     .from("images")
@@ -66,7 +65,6 @@ export async function POST(request: Request) {
     })
     .select()
     .single();
-
   if (captionInsertError) {
     return NextResponse.json({ step: "captions insert", error: captionInsertError.message }, { status: 500 });
   }
@@ -83,6 +81,7 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
     const buffer = await imageRes.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
     const mimeType = imageRes.headers.get("content-type") ?? "image/jpeg";
+
 
     parts.push({
       inline_data: {
@@ -104,5 +103,6 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
   );
 
   const data = await response.json();
+
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "No response generated.";
 }

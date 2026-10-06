@@ -12,7 +12,7 @@ export default function NavBar() {
           href="/generate"
           className="text-sm font-medium text-black dark:text-white hover:underline"
         >
-          Generate
+          Upload
         </Link>
         <Link
           href="/images"
