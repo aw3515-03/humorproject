@@ -15,9 +15,19 @@ export default function LoginPage() {
     };
 
     return (
-        <main style={{ padding: "2rem" }}>
-            <h1>Log in</h1>
-            <button onClick={handleLogin}>Continue with Google</button>
+        <main className="min-h-screen flex items-center justify-center px-4">
+            <div className="w-full max-w-md text-center">
+                <h1 className="text-4xl font-bold text-black dark:text-white mb-3">
+                    Welcome back!
+                </h1>
+
+                <button
+                onClick={handleLogin}
+                className="w-full px-4 py-3 bg-yellow-400 text-black font-semibold rounded-lg hover:bg-yellow-500 transition-colors"
+                >
+                    Log in with Google
+                </button>
+            </div>
         </main>
     );
 }

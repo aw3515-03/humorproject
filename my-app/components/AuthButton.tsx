@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import Link from "next/link";
+
 
 export default function AuthButton() {
     const router = useRouter();
@@ -32,15 +34,25 @@ export default function AuthButton() {
     };
 
     if (loading) return null;
-
+    
     if (user) {
-        return (
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                <a href="/profile">Profile</a>
-                <button onClick={handleLogout}>Log out</button>
-            </div>
+          return (
+            <button
+                onClick={handleLogout}
+                className="text-sm font-medium text-black dark:text-white hover:underline"
+            >
+                Log out
+            </button>
         );
     }
+    
 
-    return <a href="/login">Log in</a>;
+    return (
+        <Link
+            href="/login"
+            className="text-sm font-medium text-black dark:text-white hover:underline"
+        >
+            Log in
+        </Link>
+    );
 }
