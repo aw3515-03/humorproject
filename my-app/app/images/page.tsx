@@ -1,71 +1,52 @@
-import { supabase } from "@/lib/supabase";
-
-export const dynamic = "force-dynamic";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import NavBar from "@/components/NavBar";
 
 export default async function ImagesPage() {
-  const { data: images, error } = await supabase
-    .from("images")
-    .select("id, storage_path, captions(id, content)")
-    .order("id");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (error) {
-    return <p className="p-8">Error loading images and captions: {error.message}</p>;
+  if (!user) {
+    redirect("/login?next=/images");
   }
 
+  const { data: images } = await supabase
+    .from("images")
+    .select("id, image_url, created_at, captions ( id, caption_text )")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12">
-      <header className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-          Humor project
-        </p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight">Image captions</h1>
-      </header>
-
-      {images?.length ? (
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {images.map((image) => {
-            const imageUrl = supabase.storage
-              .from("images")
-              .getPublicUrl(image.storage_path).data.publicUrl;
-
-            return (
-              <li
-                key={image.id}
-                className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <NavBar />
+      <main className="max-w-5xl mx-auto px-8 py-12">
+        <h1 className="text-xl font-bold mb-8 text-black dark:text-white">
+          Your Images
+        </h1>
+        {!images || images.length === 0 ? (
+          <p className="text-zinc-500">You haven't uploaded anything yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {images.map((img) => (
+              <div
+                key={img.id}
+                className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950"
               >
-                <img
-                  src={imageUrl}
-                  alt={`Image ${image.id}`}
-                  className="aspect-[4/3] w-full bg-zinc-100 object-cover"
-                />
-                <div className="p-5">
-                  <p className="mb-3 truncate text-xs text-zinc-500" title={image.storage_path}>
-                    {image.storage_path}
-                  </p>
-                  {image.captions.length ? (
-                    <ul className="space-y-3">
-                      {image.captions.map((caption) => (
-                        <li
-                          key={caption.id}
-                          className="rounded-lg bg-zinc-50 p-3 text-sm leading-6 text-zinc-800"
-                        >
-                          {caption.content}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No captions yet.</p>
-                  )}
+                <img src={img.image_url} alt="" className="w-full h-56 object-cover" />
+                <div className="p-4">
+                  {img.captions?.map((c: { id: number; caption_text: string }) => (
+                    <p key={c.id} className="text-sm text-black dark:text-white mb-2">
+                      {c.caption_text}
+                    </p>
+                  ))}
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="rounded-xl bg-zinc-100 p-6 text-zinc-600">
-          No images have been added yet.
-        </p>
-      )}
-    </main>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

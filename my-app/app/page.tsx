@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import AuthButton from "@/components/AuthButton";
 import VoteButtons from "@/components/VoteButtons";
+import NavBar from "@/components/NavBar";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -29,18 +29,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans">
-      {/* Header */}
-      <header className="flex items-center justify-between px-8 py-6 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-2xl font-bold text-black dark:text-white">
-          Humor Project
-        </h1>
-        <div className="flex items-center gap-6">
-          <a href="/generate" className="text-sm font-medium text-black dark:text-white hover:underline">
-            Upload
-          </a>
-          <AuthButton />
-        </div>
-      </header>
+      <NavBar />
 
       {/* Feed */}
       <main className="max-w-5xl mx-auto px-8 py-12">

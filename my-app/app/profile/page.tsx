@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import NavBar from "@/components/NavBar";
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -85,34 +86,37 @@ export default function ProfilePage() {
     if (loading) return <p style={{ padding: "2rem" }}>Loading...</p>;
 
     return (
-        <main style={{ padding: "2rem" }}>
-            <h1>Your Profile</h1>
+        <div className="min-h-screen bg-zinc-50 dark:bg-black">
+            <NavBar />
+            <main style={{ padding: "2rem" }}>
+                <h1>Your Profile</h1>
 
-            {avatarUrl && (
-                <Image
-                    src={avatarUrl}
-                    alt="Avatar"
-                    width={100}
-                    height={100}
-                    style={{ borderRadius: "50%" }}
-                />
-            )}
-            <div>
-                <input type="file" accept="image/*" onChange={handleFileChange} />
-            </div>
+                {avatarUrl && (
+                    <Image
+                        src={avatarUrl}
+                        alt="Avatar"
+                        width={100}
+                        height={100}
+                        style={{ borderRadius: "50%" }}
+                    />
+                )}
+                <div>
+                    <input type="file" accept="image/*" onChange={handleFileChange} />
+                </div>
 
-            <div>
-                <label>First name</label>
-                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </div>
-            <div>
-                <label>Last name</label>
-                <input value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
+                <div>
+                    <label>First name</label>
+                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div>
+                    <label>Last name</label>
+                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
 
-            <button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
-            </button>
-        </main>
+                <button onClick={handleSave} disabled={saving}>
+                    {saving ? "Saving..." : "Save"}
+                </button>
+            </main>
+        </div>
     );
 }

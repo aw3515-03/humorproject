@@ -14,25 +14,28 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
+  const linkUrl = formData.get("imageUrl") as string | null;
 
-  if (!file) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  let imageUrl: string;
+
+  if (file) {
+    // 1. Upload image to Supabase Storage
+    const filePath = `${user.id}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("images")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    }
+
+    const { data: publicUrlData } = supabase.storage.from("images").getPublicUrl(filePath);
+    imageUrl = publicUrlData.publicUrl;
+  } else if (linkUrl) {
+    imageUrl = linkUrl;
+  } else {
+    return NextResponse.json({ error: "No file or link provided" }, { status: 400 });
   }
-
-  // 1. Upload image to Supabase Storage
-  const filePath = `${user.id}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(filePath, file);
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from("images")
-    .getPublicUrl(filePath);
-  const imageUrl = publicUrlData.publicUrl;
 
   // 2. Ask the LLM to describe the image
   const describePrompt = "Describe this image in a few sentences.";
