@@ -123,6 +123,7 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
 
   const data = await response.json();
 
+<<<<<<< HEAD
   console.log("Gemini status:", response.status);
   console.log("Gemini response:", JSON.stringify(data, null, 2));
 
@@ -146,3 +147,7 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
 
   return text;
 }
+=======
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "No response generated.";
+}
+>>>>>>> 05fca032888230ccfced30f6e5d43c51e4a532e6
