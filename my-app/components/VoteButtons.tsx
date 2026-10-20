@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LoginRequiredModal from "@/components/LoginRequiredModal";
 
 export default function VoteButtons({
   captionId,
@@ -16,10 +17,11 @@ export default function VoteButtons({
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
   const [upvotes, setUpvotes] = useState(initialUpvotes);
   const [downvotes, setDownvotes] = useState(initialDownvotes);
+  const [showModal, setShowModal] = useState(false);
 
   const vote = async (voteType: "up" | "down") => {
     if (!isLoggedIn) {
-      alert("Log in to vote.");
+      setShowModal(true);
       return;
     }
 
@@ -44,13 +46,22 @@ export default function VoteButtons({
   };
 
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <button onClick={() => vote("up")} disabled={voted === "up"} className="flex items-center gap-1">
-        👍 {upvotes}
-      </button>
-      <button onClick={() => vote("down")} disabled={voted === "down"} className="flex items-center gap-1">
-        👎 {downvotes}
-      </button>
-    </div>
+    <>
+      <div className="flex items-center gap-3 text-sm">
+        <button onClick={() => vote("up")} disabled={voted === "up"} className="flex items-center gap-1">
+          👍 {upvotes}
+        </button>
+        <button onClick={() => vote("down")} disabled={voted === "down"} className="flex items-center gap-1">
+          👎 {downvotes}
+        </button>
+      </div>
+
+      <LoginRequiredModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        message="Please log in to vote on captions. You will be redirected to the login page."
+        next="/"
+      />
+    </>
   );
 }
