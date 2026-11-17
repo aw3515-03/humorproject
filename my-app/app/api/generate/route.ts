@@ -1,10 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+type GeminiPart = {
+  text?: string;
+  inline_data?: {
+    mime_type: string;
+    data: string;
+  };
+};
+
+type GeminiResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: GeminiPart[];
+    };
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
 export async function POST(request: Request) {
   const supabase = await createClient();
-  console.log("SUPABASE CLIENT CREATED");
-
 
   const {
     data: { user },
@@ -21,11 +38,11 @@ export async function POST(request: Request) {
   let imageUrl: string;
 
   if (file) {
-    // 1. Upload image to Supabase Storage
     const filePath = `${user.id}/${Date.now()}-${file.name}`;
     const { error: uploadError } = await supabase.storage
       .from("images")
       .upload(filePath, file);
+
     if (uploadError) {
       return NextResponse.json({ step: "storage upload", error: uploadError.message }, { status: 500 });
     }
@@ -38,13 +55,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file or link provided" }, { status: 400 });
   }
 
-  // 2. Ask the LLM to describe the image
   const describePrompt = "Describe this image in a few sentences.";
   const description = await callGemini(describePrompt, imageUrl);
-  // 3. Ask the LLM to make a funny remark based on that description
-  const funnyPrompt = `Here is a description of an image: "${description}". Write one short, funny caption based on this description.`;
-  const funnyCaption = await callGemini(funnyPrompt);
-  // 4. Insert the image row
+  const captionPrompt = "Look at this image and generate exactly 4 short, funny captions. Return only four lines, one caption per line, with no numbering or bullets.";
+  const captionText = await callGemini(captionPrompt, imageUrl);
+  const captions = parseCaptions(captionText);
+
+  if (captions.length === 0) {
+    return NextResponse.json({ error: "Gemini returned no usable captions." }, { status: 500 });
+  }
+
   const { data: imageRow, error: imageInsertError } = await supabase
     .from("images")
     .insert({ user_id: user.id, image_url: imageUrl, description })
@@ -55,45 +75,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ step: "images insert", error: imageInsertError.message }, { status: 500 });
   }
 
-  // 5. Insert the caption row
-  const { data: captionRow, error: captionInsertError } = await supabase
+  const captionRows = captions.map((caption) => ({
+    image_id: imageRow.id,
+    caption_text: caption,
+    prompt_used: captionPrompt,
+  }));
+
+  const { data: captionRowsResult, error: captionInsertError } = await supabase
     .from("captions")
-    .insert({
-      image_id: imageRow.id,
-      caption_text: funnyCaption,
-      prompt_used: funnyPrompt,
-    })
-    .select()
-    .single();
+    .insert(captionRows)
+    .select();
+
   if (captionInsertError) {
     return NextResponse.json({ step: "captions insert", error: captionInsertError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ image: imageRow, caption: captionRow });
+  return NextResponse.json({
+    image: imageRow,
+    captions: captionRowsResult?.map((captionRow) => captionRow.caption_text) ?? captions,
+  });
+}
+
+function parseCaptions(rawText: string): string[] {
+  return rawText
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*•\d.\s]+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 4);
 }
 
 async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
-  const parts: any[] = [{ text: prompt }];
+  const parts: GeminiPart[] = [{ text: prompt }];
 
   if (imageUrl) {
-    console.log("Fetching image:", imageUrl);
-
     const imageRes = await fetch(imageUrl);
 
     if (!imageRes.ok) {
-      throw new Error(
-        `Failed to fetch image: ${imageRes.status} ${imageRes.statusText}`
-      );
+      throw new Error(`Failed to fetch image: ${imageRes.status} ${imageRes.statusText}`);
     }
 
     const buffer = await imageRes.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
-
-    const mimeType =
-      imageRes.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-
-    console.log("Image MIME type:", mimeType);
-    console.log("Image size:", buffer.byteLength);
+    const mimeType = imageRes.headers.get("content-type")?.split(";")[0] || "image/jpeg";
 
     parts.push({
       inline_data: {
@@ -104,7 +127,7 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: {
@@ -121,27 +144,19 @@ async function callGemini(prompt: string, imageUrl?: string): Promise<string> {
     }
   );
 
-  const data = await response.json();
-
-  console.log("Gemini status:", response.status);
-  console.log("Gemini response:", JSON.stringify(data, null, 2));
+  const data = (await response.json()) as GeminiResponse;
 
   if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        `Gemini API request failed with status ${response.status}`
-    );
+    throw new Error(data?.error?.message || `Gemini API request failed with status ${response.status}`);
   }
 
   const text = data?.candidates?.[0]?.content?.parts
-    ?.filter((part: any) => part.text)
-    ?.map((part: any) => part.text)
+    ?.filter((part) => Boolean(part.text))
+    ?.map((part) => part.text ?? "")
     ?.join("\n");
 
   if (!text) {
-    throw new Error(
-      `Gemini returned no text. Response: ${JSON.stringify(data)}`
-    );
+    throw new Error(`Gemini returned no text. Response: ${JSON.stringify(data)}`);
   }
 
   return text;

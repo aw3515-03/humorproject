@@ -15,13 +15,28 @@ export default function VoteButtons({
   initialDownvotes: number;
 }) {
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
-  const [upvotes, setUpvotes] = useState(initialUpvotes);
-  const [downvotes, setDownvotes] = useState(initialDownvotes);
+  const [score, setScore] = useState(initialUpvotes - initialDownvotes);
   const [showModal, setShowModal] = useState(false);
 
   const vote = async (voteType: "up" | "down") => {
     if (!isLoggedIn) {
       setShowModal(true);
+      return;
+    }
+
+    const isSameVote = voted === voteType;
+
+    if (isSameVote) {
+      const res = await fetch("/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ captionId, voteType, remove: true }),
+      });
+
+      if (res.ok) {
+        setVoted(null);
+        setScore((current) => (voteType === "up" ? current - 1 : current + 1));
+      }
       return;
     }
 
@@ -33,26 +48,44 @@ export default function VoteButtons({
 
     if (res.ok) {
       if (voted === "up" && voteType === "down") {
-        setUpvotes((n) => n - 1);
-        setDownvotes((n) => n + 1);
+        setScore((current) => current - 2);
       } else if (voted === "down" && voteType === "up") {
-        setDownvotes((n) => n - 1);
-        setUpvotes((n) => n + 1);
+        setScore((current) => current + 2);
       } else if (voted === null) {
-        voteType === "up" ? setUpvotes((n) => n + 1) : setDownvotes((n) => n + 1);
+        setScore((current) => (voteType === "up" ? current + 1 : current - 1));
       }
+
       setVoted(voteType);
     }
   };
 
+  const buttonBase = "flex h-5 w-5 items-center justify-center rounded-sm text-base leading-none transition-colors duration-150";
+  const inactive = "bg-transparent text-zinc-500 hover:text-zinc-200";
+  const active = "bg-transparent text-yellow-400";
+
   return (
     <>
-      <div className="flex items-center gap-3 text-sm">
-        <button onClick={() => vote("up")} disabled={voted === "up"} className="flex items-center gap-1">
-          👍 {upvotes}
+      <div className="flex flex-col items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => vote("up")}
+          className={`${buttonBase} ${voted === "up" ? active : inactive}`}
+          aria-label="Upvote"
+        >
+          ⌃
         </button>
-        <button onClick={() => vote("down")} disabled={voted === "down"} className="flex items-center gap-1">
-          👎 {downvotes}
+
+        <div className="flex h-8 min-w-8 items-center justify-center text-lg font-bold text-white">
+          {score}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => vote("down")}
+          className={`${buttonBase} ${voted === "down" ? active : inactive}`}
+          aria-label="Downvote"
+        >
+          ⌄
         </button>
       </div>
 

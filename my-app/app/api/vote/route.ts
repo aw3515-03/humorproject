@@ -12,7 +12,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  const { captionId, voteType } = await request.json();
+  const { captionId, voteType, remove } = await request.json();
+
+  if (remove === true) {
+    const { error } = await supabase
+      .from("votes")
+      .delete()
+      .eq("caption_id", captionId)
+      .eq("user_id", user.id)
+      .eq("vote_type", voteType);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, removed: true });
+  }
 
   if (!["up", "down"].includes(voteType)) {
     return NextResponse.json({ error: "Invalid vote type" }, { status: 400 });
