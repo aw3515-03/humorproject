@@ -26,6 +26,7 @@ export default function GeneratePage() {
   const [selectedLibraryImageId, setSelectedLibraryImageId] = useState<number | null>(null);
   const [libraryImages, setLibraryImages] = useState<{ id: number; image_url: string }[]>([]);
   const generationPromiseRef = useRef<Promise<void> | null>(null);
+  const generationModeRef = useRef<"full" | "background">("full");
 
   const handleLibraryImageSelect = (image: { id: number; image_url: string }) => {
     setSelectedLibraryImageId(image.id);
@@ -55,6 +56,8 @@ export default function GeneratePage() {
   }, []);
 
   const startGeneration = async (mode: "full" | "background" = "full") => {
+    generationModeRef.current = mode;
+
     const isUploadSource = sourceTab === "upload" && !!file;
     const isLinkSource = sourceTab === "link" && !!linkUrl;
 
@@ -121,9 +124,10 @@ export default function GeneratePage() {
       setCaptionIndex(0);
       setSubmitting(false);
 
-      if (mode === "full") {
+      if (generationModeRef.current === "full") {
         setScreen("results");
       } else {
+        setScreen("upload");
         const preview = sourceTab === "upload" && file ? await fileToDataUrl(file) : linkUrl || imageUrl || null;
         setGenerationPopupState({ visible: true, status: "done", imageUrl: preview });
       }
@@ -143,6 +147,7 @@ export default function GeneratePage() {
   };
 
   const handleContinueBrowsing = async () => {
+    generationModeRef.current = "background";
     setScreen("upload");
     setSubmitting(false);
     const preview = sourceTab === "upload" && file ? await fileToDataUrl(file) : linkUrl || resultImageUrl || null;
@@ -302,10 +307,6 @@ export default function GeneratePage() {
                 <img src={resultImageUrl ?? ""} alt="Generated" className="h-[360px] w-full object-cover" />
               </div>
 
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <span className="text-lg font-black text-yellow-400">CRACK</span>
-                <span className="text-lg font-black text-white">’D</span>
-              </div>
 
               <p className="mt-6 text-center text-2xl font-medium leading-relaxed text-zinc-100">
                 {currentCaption?.caption_text}

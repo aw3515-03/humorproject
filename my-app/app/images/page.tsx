@@ -208,10 +208,6 @@ export default function ImagesPage() {
               <img src={selectedImage.image_url} alt="Selected upload" className="h-[360px] w-full object-cover" />
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <span className="text-lg font-black text-yellow-400">CRACK</span>
-              <span className="text-lg font-black text-white">’D</span>
-            </div>
 
             <p className="mt-6 text-center text-2xl font-medium leading-relaxed text-zinc-100">
               {currentCaption?.caption_text}
